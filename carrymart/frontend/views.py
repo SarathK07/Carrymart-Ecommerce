@@ -9,7 +9,7 @@ def register_page(request):
 def products_page(request):
     return render(request, "products/products.html")
 
-
+#dashboard view
 def dashboard_page(request):
     return render(request, "products/dashboard.html")
 
