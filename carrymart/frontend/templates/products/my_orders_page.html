@@ -1,0 +1,90 @@
+{% extends 'products/dashboard.html' %}
+
+{% block title %}My Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-semibold mb-4 text-center">📦 My Orders</h2>
+    <div id="orders-list" class="row g-3"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+
+if (!token) {
+    window.location.href = "/";
+}
+
+function loadOrders() {
+    fetch("http://127.0.0.1:8000/orders/my/", {
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/json"
+        }
+    })
+    .then(res => {
+        const ct = res.headers.get("content-type");
+        if (!res.ok || !ct || !ct.includes("application/json")) {
+            throw new Error("Invalid response");
+        }
+        return res.json();
+    })
+    .then(data => {
+        const container = document.getElementById("orders-list");
+        container.innerHTML = "";
+
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center text-muted">
+                    You have no orders yet 😢
+                </div>`;
+            return;
+        }
+
+        data.forEach(order => {
+            const itemsHtml = Array.isArray(order.items) && order.items.length
+                ? order.items.map(item => `
+                    <li>
+                        ${item.product_name} × ${item.quantity}
+                        — ₹${item.price}
+                    </li>
+                `).join("")
+                : `<li class="text-muted">No items found</li>`;
+
+            container.innerHTML += `
+                <div class="col-12">
+                    <div class="card p-3 shadow-sm rounded-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <h5>Order #${order.id}</h5>
+                            <span class="badge bg-info text-dark">
+                                ${order.status.replaceAll('_',' ').toUpperCase()}
+                            </span>
+                        </div>
+
+                        <p class="text-muted mb-1">
+                            Date: ${new Date(order.created_at).toLocaleString()}
+                        </p>
+
+                        <ul>${itemsHtml}</ul>
+
+                        <p class="fw-bold mb-0">
+                            Total: ₹${order.total_price}
+                        </p>
+                    </div>
+                </div>
+            `;
+        });
+    })
+    .catch(err => {
+        console.error(err);
+        localStorage.removeItem("token");
+        window.location.href = "/";
+    });
+}
+
+loadOrders();
+</script>
+
+{% endblock %}

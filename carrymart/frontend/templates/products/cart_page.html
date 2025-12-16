@@ -1,0 +1,144 @@
+{% extends 'products/dashboard.html' %}
+
+{% block title %}My Cart{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="fw-semibold mb-4 text-center">🛒 My Cart</h2>
+
+    <div id="cart-items" class="row g-3">
+        <!-- Cart items will be loaded here via JS -->
+    </div>
+
+    <div class="text-end mt-4">
+        <h5>Total: ₹<span id="cart-total">0.00</span></h5>
+        <button class="btn btn-warning btn-lg mt-2" id="checkout-btn">
+            Proceed to Checkout
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+        window.location.href = "/";
+        return;
+    }
+
+    // Load cart items
+    function loadCart() {
+        fetch("http://127.0.0.1:8000/cart/viewcart", {
+            method: "GET",
+            headers: { "Authorization": "Bearer " + token }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const container = document.getElementById("cart-items");
+            container.innerHTML = "";
+
+            let total = 0;
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `<div class="col-12 text-center text-muted">
+                    Your cart is empty 😢
+                </div>`;
+                document.getElementById("cart-total").innerText = "0.00";
+                return;
+            }
+
+            data.forEach(item => {
+                total += Number(item.price) * Number(item.quantity);
+
+                container.innerHTML += `
+                    <div class="col-12">
+                        <div class="card p-3 rounded-3 shadow-sm d-flex flex-row align-items-center gap-3">
+                            <div style="width:80px;height:80px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;">
+                                <img src="${item.image}" alt="${item.product_name}" style="max-height:70px;">
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">${item.product_name}</h6>
+                                <p class="mb-1 text-muted">Price: ₹${item.price}</p>
+                                <div class="d-flex align-items-center gap-2">
+                                    Quantity: 
+                                    <input type="number" min="1" value="${item.quantity}"
+                                        class="form-control form-control-sm w-auto"
+                                        onchange="updateQuantity(${item.id}, this.value)">
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="removeItem(${item.id})">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById("cart-total").innerText = total.toFixed(2);
+        })
+        .catch(err => console.error("Error loading cart:", err));
+    }
+
+    // Remove cart item
+    window.removeItem = function(itemId) {
+        fetch("http://127.0.0.1:8000/cart/delete/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ item_id: itemId })
+        })
+        .then(res => res.json())
+        .then(() => {
+            loadCart();
+            refreshCartCount();
+        });
+    }
+
+    // Update quantity
+    window.updateQuantity = function(itemId, quantity) {
+        fetch("http://127.0.0.1:8000/cart/update/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ item_id: itemId, quantity: quantity })
+        })
+        .then(res => res.json())
+        .then(() => {
+            loadCart();
+            refreshCartCount();
+        });
+    }
+
+    // Refresh navbar cart count
+    function refreshCartCount() {
+        fetch("http://127.0.0.1:8000/cart/", {
+            headers: { "Authorization": "Bearer " + token }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const countEl = document.getElementById("cart-count");
+            if (countEl) countEl.innerText = data.length;
+        });
+    }
+
+    // Checkout button (FIXED)
+    const checkoutBtn = document.getElementById("checkout-btn");
+    if (checkoutBtn) {
+        checkoutBtn.addEventListener("click", () => {
+            window.location.href = "{% url 'payment' %}";
+        });
+    }
+
+    // Initial load
+    loadCart();
+
+});
+</script>
+{% endblock %}

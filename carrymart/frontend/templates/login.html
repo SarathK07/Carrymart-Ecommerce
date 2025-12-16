@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card p-4 mt-5">
+
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="bg-warning text-dark d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                     style="width:70px;height:70px;">
+                    <i class="bi bi-person-check-fill fs-2"></i>
+                </div>
+                <h3 class="fw-bold mb-1">Welcome Back</h3>
+                <p class="text-muted mb-0">Login to your account 🛍️</p>
+            </div>
+
+            <!-- Form -->
+            <div>
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="username" placeholder="Username">
+                    <label for="username">
+                        <i class="bi bi-person me-2"></i>Username
+                    </label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input type="password" class="form-control" id="password" placeholder="Password">
+                    <label for="password">
+                        <i class="bi bi-lock me-2"></i>Password
+                    </label>
+                </div>
+
+                <button class="btn btn-register w-100 py-2 mt-2" onclick="login()">
+                    <i class="bi bi-box-arrow-in-right me-2"></i> Login
+                </button>
+
+                <p id="msg" class="text-center mt-3 small"></p>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-3">
+                <p class="small text-muted mb-0">
+                    Don’t have an account? 
+                    <a href="/register-page/" class="text-warning fw-semibold text-decoration-none">Create one</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function login() {
+    const btn = event.target;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Logging in...';
+    btn.disabled = true;
+
+    fetch('http://127.0.0.1:8000/users/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value.trim()
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const msg = document.getElementById('msg');
+
+        if (data.access) {
+            localStorage.setItem('token', data.access);
+
+            msg.className = 'text-success text-center mt-3';
+            msg.innerHTML = '<i class="bi bi-check-circle me-1"></i> Login successful!';
+
+            setTimeout(() => {
+                window.location.href = "http://127.0.0.1:8000/dashboard/";
+            }, 800);
+        } else {
+            msg.className = 'text-danger text-center mt-3';
+            msg.innerHTML = '<i class="bi bi-x-circle me-1"></i> Invalid username or password';
+        }
+
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i> Login';
+        btn.disabled = false;
+    })
+    .catch(() => {
+        const msg = document.getElementById('msg');
+        msg.className = 'text-danger text-center mt-3';
+        msg.innerText = 'Network error. Please try again.';
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i> Login';
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}
